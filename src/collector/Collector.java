@@ -34,7 +34,7 @@ import org.mapdb.DBMaker;
  * @author Aubert Gwendal & Scolan Alexis
  *
  */
-public class FeedReader {
+public class Collector {
 
 	/**
 	 * Database
@@ -67,11 +67,11 @@ public class FeedReader {
 				System.out.println("current dir = " + dir);
 
 		//MapDB initialisation
-		db = DBMaker.newFileDB(new File( dir + "/db.out")).make();
+		db = DBMaker.newFileDB(new File( dir + "/data/rssDB/db.out")).make();
 		treeMap = db.getTreeMap("map");
 
 		try {
-			DetectorFactory.loadProfile(dir + "/profiles");
+			DetectorFactory.loadProfile(dir + "/data/langdetect/profiles");
 		} catch (LangDetectException e1) {
 			e1.printStackTrace();
 		}
