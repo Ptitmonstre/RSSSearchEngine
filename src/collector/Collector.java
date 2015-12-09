@@ -160,8 +160,10 @@ public class Collector implements Runnable{
 				category=splitted[0];
 				line=splitted[1];
 			}
-			try {
-				URL feedUrl = new URL(line);
+			URLConnection feedUrl=null;
+			try { 
+				feedUrl= new URL(line).openConnection();
+				feedUrl.setReadTimeout(1000);
 				SyndFeedInput input = new SyndFeedInput();
 				SyndFeed feed = input.build(new XmlReader(feedUrl));
 				List<SyndEntry> entries = feed.getEntries();
@@ -193,6 +195,8 @@ public class Collector implements Runnable{
 							}else{
 	
 								HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+								connection.setReadTimeout(1000);
+								connection.setConnectTimeout(1000);
 								txtcontent=connection.getResponseMessage();
 								StringWriter wr=new StringWriter();
 								IOUtils.copy(connection.getInputStream(), wr, "utf-8");
@@ -201,10 +205,10 @@ public class Collector implements Runnable{
 								txtcontent = ArticleSentencesExtractor.INSTANCE.getText(txtcontent).trim().replaceAll(" +|\n", " ");						
 	
 							}
-						}catch (ConnectException e2) {
-							System.err.println("Connection timed out: couldn't read "+e.getLink());
+						}catch (UnknownHostException e2) {
+							System.err.println("Unknown host: couldn't read "+e.getLink());
 						}catch (Exception e2) {
-							e2.printStackTrace();
+							System.err.println("Connection timed out: couldn't read "+e.getLink());
 						}
 						entry.setContent(txtcontent);
 	
@@ -222,8 +226,10 @@ public class Collector implements Runnable{
 						addToIndex(entry);
 					}
 				}
-			} catch (Exception e) {
-				System.err.println("Malformed URL:");
+			}catch (UnknownHostException e2) {
+				System.err.println("Unknown host: couldn't read "+feedUrl.getURL().toString());
+			}catch (Exception e) {
+				System.err.println("Invalid RSS or RSS Content:");
 				e.printStackTrace();
 			}
 		}
