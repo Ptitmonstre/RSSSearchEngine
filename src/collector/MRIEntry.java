@@ -2,13 +2,11 @@ package collector;
 
 import java.io.Serializable;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import javax.xml.bind.DatatypeConverter;
 
-import org.json.JSONObject;
 import org.json.JSONWriter;
 
 
@@ -28,10 +26,11 @@ public class MRIEntry implements Serializable{
 	private String language;
 	private String copyright;
 	private String hash;
+	private String category;
 	private MessageDigest md;
 
 	public MRIEntry(String title, String description, String content, String author, String date, String url_src, String txt_src,
-			String language, String copyright) {
+			String language, String copyright, String category) {
 		super();
 		this.title = title;
 		this.description = description;
@@ -42,6 +41,7 @@ public class MRIEntry implements Serializable{
 		this.language = language;
 		this.copyright = copyright;
 		this.content=content;
+		this.category=category;
 		try {
 			md = MessageDigest.getInstance("MD5");
 			//cryptage en md5. Cle choisie titre + url + langue
@@ -115,6 +115,12 @@ public class MRIEntry implements Serializable{
 	}
 	public void setContent(String content) {
 		this.content = content;
+	}
+	public String getCategory() {
+		return category;
+	}
+	public void setCategory(String category) {
+		this.category = category;
 	}
 
 	public String toString(){

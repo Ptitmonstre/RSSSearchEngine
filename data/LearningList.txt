@@ -1,4 +1,4 @@
-﻿BUSINESS http://rss.nytimes.com/services/xml/rss/nyt/Business.xml
+BUSINESS http://rss.nytimes.com/services/xml/rss/nyt/Business.xml EN
 BUSINESS http://rss.feedsportal.com/c/499/f/413824/index.rss
 BUSINESS http://www.thetimes.co.uk/tto/business/rss
 BUSINESS http://rss.cnn.com/rss/edition_business.rss

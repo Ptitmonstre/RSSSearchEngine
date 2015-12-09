@@ -15,4 +15,5 @@
 /db.out
 /db.out.p
 /db.out.t
+data/indexes
 !src/*
