@@ -16,4 +16,6 @@
 /db.out.p
 /db.out.t
 data/indexes
+data/indexes_backup
+data/dictionnaries_new_locked
 !src/*
