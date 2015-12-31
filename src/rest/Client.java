@@ -48,6 +48,8 @@ public class Client extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_OK);
         response.getWriter().println("<p>Requete : "+q+"</p>");
         response.getWriter().println("<p>Categorie : "+flag+"</p>");
+        
+        //TODO exemple : http://stackoverflow.com/a/5100727
     }
     
 }
