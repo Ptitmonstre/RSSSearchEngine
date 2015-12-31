@@ -7,9 +7,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -21,6 +23,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -28,6 +31,7 @@ import org.apache.lucene.index.IndexNotFoundException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
@@ -37,6 +41,7 @@ import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.QueryBuilder;
 import org.tartarus.snowball.ext.FrenchStemmer;
 import org.tartarus.snowball.ext.PorterStemmer;
+import weka.core.converters.ConverterUtils.DataSource;
 
 import weka.classifiers.bayes.NaiveBayes;
 import weka.core.Attribute;
@@ -77,6 +82,7 @@ public class Classifier implements Runnable{
 		frStemmer=new FrenchStemmer();
 		BufferedReader br;
 		frStopList=new ArrayList<>();
+		this.classify=classify;
 		try {
 			br = new BufferedReader(new FileReader(new File("./data/stemming/fr/stop.txt")));
 			String word=null;
@@ -152,8 +158,6 @@ public class Classifier implements Runnable{
 		if(!this.classify){
 			try {
 				learnFromIndex();
-				//				incrémenter et sauvegarder les stamps des categories qui ont été mises à jour
-				//				saveStamps();
 			} catch (IOException e) {}
 		}else{
 			//charger le dictionnaire
@@ -187,10 +191,13 @@ public class Classifier implements Runnable{
 				System.out.print("Lecture et création des dictionnaires... ");
 				for(String category : categories){
 					//pour tout élément avec un champ predicted_category vide
-					Query q=MultiFieldQueryParser.parse(new String[]{language} ,new String[]{"language"}, analyzer);
+					QueryParser qp=new QueryParser("", analyzer);
+					Query q=qp.parse("language:\""+language+"\" AND category:\""+category+"\"");
 					double nbRes=searcher.count(q);
 
 					//ajoute la catégorie dans le vecteur des catégories possibles
+					int categoryNumber=categories.indexOf(category);
+					if(elementsInCategory[categoryNumber]==null) elementsInCategory[categoryNumber]=new ArrayList<String[]>();
 					if(nbRes>0){
 						fvClassVal.addElement(category);
 
@@ -209,8 +216,6 @@ public class Classifier implements Runnable{
 							}
 							//ajouter au dictionnaire de la catégorie (numérotées telles qu'elles sont lues)
 
-							int categoryNumber=categories.indexOf(category);
-							if(elementsInCategory[categoryNumber]==null) elementsInCategory[categoryNumber]=new ArrayList<String[]>();
 							elementsInCategory[categoryNumber].add(stemd);
 						}
 					}
@@ -234,7 +239,8 @@ public class Classifier implements Runnable{
 				int tf;
 				double idf;
 				for(String category:categories){
-					for(String[] doc:elementsInCategory[categories.indexOf(category)]){
+					for(String[] doc:elementsInCategory
+							[categories.indexOf(category)]){
 						i = new Instance(dictionnary.size()+1);
 						i.setValue((Attribute)fvWekaAttributes.elementAt(0), category);
 						for(n=0; n<dictionnary.size();n++){
@@ -258,33 +264,32 @@ public class Classifier implements Runnable{
 				try {
 					//sauvegarder le classifierArffSaver saver = new ArffSaver();
 					ArffSaver saver = new ArffSaver();
-			        saver.setInstances(TrainingSet);
+					saver.setInstances(TrainingSet);
 					File newF=new File(dicFolders+"_new_locked/"+language+".arff");
-			        saver.setFile(newF);
-			        saver.writeBatch();
+					saver.setFile(newF);
+					saver.writeBatch();
 					//TODO évaluer la qualité du classifier avec le tiers de documents restant
 				} catch (Exception e) {
 					System.err.println("Could not generate the classifier");
 				}
 				System.out.println("Fin.");
 			}
-			File newF=new File(dicFolders+"_new_locked");
-			if((newF=new File(dicFolders+"_new")).exists()){
-				//supprimer le dictionnaire courant et renommer le nouveau en dictinnaire courant
+			File newF=new File(dicFolders+"_new");
+			//supprimer le dictionnaire courant et renommer le nouveau en dictinnaire courant
+			try{
+				FileUtils.deleteDirectory(newF);
+			}catch(Exception e){
 				try{
-					(new File(dicFolders+"_new")).delete();
-				}catch(Exception e){
-					try {
-						Thread.currentThread().wait(300);
-						(new File(dicFolders+"_new")).delete();
-					} catch (Exception e1) {
-						System.err.println("Could not save the instances to _new");
-						e1.printStackTrace();
-					}
+					FileUtils.deleteDirectory(newF);
+				}catch(Exception e1){
+					System.err.println("Could not save the instances to _new");
+					e1.printStackTrace();
 				}
-				if(!newF.renameTo(new File(dicFolders+"_new"))) System.err.println("Error swapping the dictionnaries");
-
 			}
+			newF=new File(dicFolders+"_new_locked");
+			if(!newF.renameTo(new File(dicFolders+"_new"))) System.err.println("Error swapping the dictionnaries");
+
+			System.out.println("Fin de l'apprentissage");
 		}catch (IOException | org.apache.lucene.queryparser.classic.ParseException e) {
 			System.err.println("Couldn't read the index");
 		}
@@ -297,7 +302,7 @@ public class Classifier implements Runnable{
 
 			Query q=new QueryBuilder(analyzer).createPhraseQuery("predicted_category", "NULL");
 			int nbRes=searcher.count(q);
-			for(int i=0; i<nbRes*2/3; i++){//pour tout élément non classifié
+			for(int i=0; i<nbRes; i++){//pour tout élément non classifié
 				//stemming
 				//confrontation au dictionnaire
 				//réinsérer avec les champs de prédiction
@@ -308,26 +313,36 @@ public class Classifier implements Runnable{
 	}
 	private void loadDictionnary(){
 		//si il existe un dictionnaire nouveau
-		File newF;
-		if((newF=new File(dicFolders+"_new")).exists()){
-			//supprimer le dictionnaire courant et renommer le nouveau en dictinnaire courant
+		if((new File(dicFolders+"_new")).exists()){
+			//supprimer le dictionnaire courant et renommer le nouveau en dictionnaire courant
 			try{
-				(new File(dicFolders+"_current")).delete();
+				FileUtils.deleteDirectory(new File(dicFolders+"_current"));
 			}catch(Exception e){}
-			if(newF.renameTo(new File(dicFolders+"_current"))) System.err.println("Error swapping the dictionnaries");
+			if((new File(dicFolders+"_new")).renameTo(new File(dicFolders+"_current"))) System.err.println("Error swapping the dictionnaries");
 
 		}
+		clsEn = (weka.classifiers.Classifier)new NaiveBayes();
+		clsFr = (weka.classifiers.Classifier)new NaiveBayes();
 		//utiliser le dictionnaire courant
 		try {
-			clsEn = (weka.classifiers.Classifier) weka.core.SerializationHelper.read(dicFolders+"_current/dictionnaryEn.model");
-			clsFr = (weka.classifiers.Classifier) weka.core.SerializationHelper.read(dicFolders+"_current/dictionnaryFr.model");
+			DataSource source = new DataSource(dicFolders+"_current/en.arff");
+			Instances data = source.getDataSet();
+			data.setClassIndex(0);
+			clsEn.buildClassifier(data);
+//			source = new DataSource(dicFolders+"_current/fr.arff");
+//			data = source.getDataSet();
+//			data.setClassIndex(0);
+//			clsFr.buildClassifier(data);
 		} catch (Exception e) {
 			System.err.println("Error reading the current dictionnary");
+			e.printStackTrace();
 		}
+		System.out.println("Classifiers ready.");
 	}
 
 	private String[] stemming(String s, String language){
 		ArrayList<String> res=new ArrayList<String>();
+		s.replaceAll("[^\\p{L}^\\d\n ]", " ").replaceAll(" +|\n", " ");
 		String[] words=s.toLowerCase().split("\\s+");
 		for(String w: words){
 			if(language.equals("en") && !enStopList.contains(w)){
@@ -341,6 +356,9 @@ public class Classifier implements Runnable{
 			}else if(!language.equals("fr") && !language.equals("en")){
 				System.err.println("Language not supported by stemming");
 			}
+		}
+		for(String w:res){
+			w=w.replaceAll("[^\\p{L}^\\d]", "").trim();
 		}
 
 		return (String[]) res.toArray(new String[res.size()]);
