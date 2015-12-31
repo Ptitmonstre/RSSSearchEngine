@@ -20,10 +20,13 @@ public class Client extends HttpServlet {
     		
     		//Si parametre flag
     		if(splitted.length > 2 && (splitted[2].equals("flag"))){
+    			splitted[1] = splitted[1].replace('_', ' ');
+    			splitted[3] = splitted[3].replace('_', ' ');
     			this.query(splitted[1], splitted[3], response);
     		}
     		//Si autre parametre que flag, on ne s'en charge pas
     		else{
+    			splitted[1] = splitted[1].replace('_', ' ');
     			this.query(splitted[1], "", response);
     		}
     	}
