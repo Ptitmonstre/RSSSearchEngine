@@ -204,8 +204,7 @@ public class Collector implements Runnable{
 								IOUtils.copy(connection.getInputStream(), wr, "utf-8");
 								txtcontent=wr.toString();
 								//Contenu de la page
-								txtcontent = ArticleSentencesExtractor.INSTANCE.getText(txtcontent).trim().replaceAll(" +|\n", " ");                       
-
+								txtcontent = ArticleSentencesExtractor.INSTANCE.getText(txtcontent).replaceAll("[^\\p{L}^\\d\n ]", " ").replaceAll(" +|\n", " ");                       
 							}
 						}catch (UnknownHostException e2) {
 							System.err.println("Unknown host: couldn't read "+e.getLink());
